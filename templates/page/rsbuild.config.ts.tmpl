@@ -21,8 +21,12 @@ const hostSingleton = { singleton: true, requiredVersion: false } as const;
 // and a second copy of a plugin entrypoint is a second React context.
 const hostProvided = { ...hostSingleton, import: false } as const;
 
+// A share key is an EXACT module specifier, so every key here is spelled as
+// one — quoted, even where JavaScript would accept a bare identifier. A bare
+// `react` and a quoted "react" mean the same thing to a bundler and two
+// different things to a reader skimming for a missing entry.
 const shared = {
-  react: { ...hostSingleton },
+  "react": { ...hostSingleton },
   "react/jsx-runtime": { ...hostSingleton },
   "react-dom": { ...hostSingleton },
   // A share key is an EXACT specifier. A kit that mounts its own root with

@@ -4,9 +4,9 @@ go 1.27.3
 
 // Pinned by the solution-go agent, so a new solution does not have to work the
 // graph out. The runtime pin is a RELEASE, never a pseudo-version: a
-// pseudo-version names a commit that may never reach a tag, and
-// obin-ai/core-solutions' check-consumed-apis gate requires the native
-// projected-token runtime (v0.0.12 or later).
+// pseudo-version names a commit that may never reach a tag, and a solution
+// backend must pin the native projected-token runtime — v0.0.12 or later —
+// which is what every consumer's consumed-API gate checks for.
 //
 // This block is `go mod tidy`-clean as generated, with go.sum beside it, so a
 // freshly scaffolded backend builds with the default -mod=readonly and no

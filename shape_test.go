@@ -11,6 +11,7 @@ import (
 	modulecontract "github.com/codefly-dev/core/contracts/module"
 	"github.com/codefly-dev/core/solution/manifest"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // THE LINE BETWEEN THIS AGENT AND THE CLI, held by tests rather than by a
@@ -78,12 +79,15 @@ func TestNoTemplateIsOneOfTheSolutionsDocuments(t *testing.T) {
 // probe, and exactly two service-dependencies (the authority interface and its
 // hop). All of it is the CLI's, so no template may state any of it — not even
 // as a value that happens to agree today.
+//
+// A FENCED BLOCK IN A MARKDOWN TEMPLATE IS AN EXAMPLE, not a declaration:
+// nothing reads Markdown as a manifest, and GETTING_STARTED.md deliberately
+// shows the block an author adds by hand when the service was created outside
+// `add solution`. The fence is what marks it as prose, so fenced blocks come
+// out before matching and everything else — prose outside a fence, and every
+// line of a template that is not Markdown — is still held to the rule.
+// TestTheExampleManifestIsTheHostsDoorOnly reads that example structurally.
 func TestNoTemplateDeclaresWhatTheServiceManifestDeclares(t *testing.T) {
-	// Matched at the start of a line, so prose and a commented example in
-	// GETTING_STARTED.md — which deliberately shows the block an author adds
-	// by hand when the service was created outside `add solution` — is not a
-	// declaration. A template that is itself a manifest would declare them at
-	// column zero.
 	declarations := []*regexp.Regexp{
 		regexp.MustCompile(`(?m)^module-identity:`),
 		regexp.MustCompile(`(?m)^service-dependencies:`),
@@ -91,11 +95,33 @@ func TestNoTemplateDeclaresWhatTheServiceManifestDeclares(t *testing.T) {
 		regexp.MustCompile(`(?m)^workspace-configuration-dependencies:`),
 	}
 	for name, content := range templateText(t) {
+		prose := withoutFencedExamples(name, content)
 		for _, declaration := range declarations {
-			require.Falsef(t, declaration.MatchString(content),
+			require.Falsef(t, declaration.MatchString(prose),
 				"%s declares %s, which `codefly add solution` writes after this Create returns", name, declaration)
 		}
 	}
+}
+
+// withoutFencedExamples is a Markdown template with its fenced code blocks
+// removed. A template that is not Markdown is returned whole: a YAML template
+// has no fences and no examples, and every line of it is a declaration.
+func withoutFencedExamples(name, content string) string {
+	if !strings.HasSuffix(name, ".md.tmpl") {
+		return content
+	}
+	var prose []string
+	fenced := false
+	for _, line := range strings.Split(content, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			fenced = !fenced
+			continue
+		}
+		if !fenced {
+			prose = append(prose, line)
+		}
+	}
+	return strings.Join(prose, "\n")
 }
 
 // TestNoTemplateNamesAModuleEdge is SP-SOL-04 at the source. A solution
@@ -107,21 +133,116 @@ func TestNoTemplateDeclaresWhatTheServiceManifestDeclares(t *testing.T) {
 // The scaffolded consumes_test.go holds a generated solution to the same rule
 // in its own suite. This holds the agent to never writing one.
 func TestNoTemplateNamesAModuleEdge(t *testing.T) {
-	edge := regexp.MustCompile(`(?m)^\s*-\s+name:\s+\S+\s*$`)
 	for name, content := range templateText(t) {
 		if !strings.Contains(content, "service-dependencies") {
 			continue
 		}
-		// GETTING_STARTED.md is the one template that shows the block, inside
-		// a fenced example for a service created outside `add solution`. It
-		// may show the host's own door and nothing else.
-		require.Equal(t, "templates/factory/GETTING_STARTED.md.tmpl", name,
-			"%s mentions service-dependencies; only GETTING_STARTED may, as the example an author copies", name)
-		for _, line := range edge.FindAllString(content, -1) {
-			require.Containsf(t, line, "hop",
-				"%s shows a service-dependency on something other than the authority's hop: %q", name, strings.TrimSpace(line))
-		}
+		require.Containsf(t, mayMentionModuleEdges, name,
+			"%s mentions service-dependencies; only the example an author copies and the scaffolded refusal of an edge may", name)
 	}
+	// Both are reached, so neither entry can rot into a stale exemption for a
+	// template that no longer says anything about an edge.
+	for name := range mayMentionModuleEdges {
+		require.Containsf(t, templateText(t)[name], "service-dependencies",
+			"%s is exempt from the module-edge rule but no longer mentions one: drop the exemption", name)
+	}
+}
+
+// mayMentionModuleEdges are the two templates that may say
+// `service-dependencies`, and what each says. NEITHER DECLARES ONE.
+//
+//   - GETTING_STARTED.md shows the block inside a fenced example, for a
+//     service created outside `add solution`.
+//     TestTheExampleManifestIsTheHostsDoorOnly parses it and holds it to the
+//     host's door.
+//   - consumes_test.go READS the service manifest in order to refuse an edge:
+//     it is this very rule, enforced inside the scaffolded solution's own
+//     suite, so the refusal lands in `go test` where whoever added the edge is
+//     standing rather than only at the consumer repository's gate. The string
+//     is a YAML struct tag and the prose explaining it.
+var mayMentionModuleEdges = map[string]string{
+	"templates/factory/GETTING_STARTED.md.tmpl": "the example an author copies",
+	"templates/factory/consumes_test.go.tmpl":   "the scaffolded refusal of an edge",
+}
+
+// TestTheExampleManifestIsTheHostsDoorOnly reads the YAML example in
+// GETTING_STARTED.md STRUCTURALLY, as obin-ai/core-solutions'
+// check_solution_mesh.py reads a real manifest and for the same reason: four
+// spellings of one object defeat a pattern scan, and all four parse to the
+// same value. An earlier line-regex here read the example's `- name: grpc` —
+// an endpoint of the hop — as a module edge, and would have read a real edge
+// spelled as a flow mapping as nothing at all.
+//
+// The example is what an author copies when the service was added with
+// `codefly add service` rather than `codefly add solution`, so an edge shown
+// here becomes an edge in a real manifest. The only ones it may show are the
+// host's own door: the authority interface required by `interface:` alone, and
+// `authority/hop` as `kind: external`.
+func TestTheExampleManifestIsTheHostsDoorOnly(t *testing.T) {
+	var document struct {
+		ModuleIdentity bool `yaml:"module-identity"`
+		Dependencies   []struct {
+			Interface string `yaml:"interface"`
+			Name      string `yaml:"name"`
+			Module    string `yaml:"module"`
+			Kind      string `yaml:"kind"`
+		} `yaml:"service-dependencies"`
+		Endpoints []struct {
+			Name   string `yaml:"name"`
+			Health struct {
+				Readiness struct {
+					Path string `yaml:"path"`
+				} `yaml:"readiness"`
+			} `yaml:"health"`
+		} `yaml:"endpoints"`
+	}
+	example := fencedYAML(t, templateText(t)["templates/factory/GETTING_STARTED.md.tmpl"])
+	require.NoError(t, yaml.Unmarshal([]byte(example), &document),
+		"the example an author copies must be readable YAML")
+
+	require.True(t, document.ModuleIdentity,
+		"a solution backend presents the solution's identity: the authority takes its workload credential as the actor of every Work Context it issues")
+	require.Len(t, document.Dependencies, 2,
+		"the host's door is the authority interface and its hop, and nothing else")
+
+	// The interface, required by `interface:` alone so the workspace binds it
+	// to the one authority in scope. check_solution_mesh reads an
+	// interface-only entry as the door; one that also names a service is an
+	// ordinary module edge, and the hop is a door ONLY beside this entry.
+	authority := document.Dependencies[0]
+	require.Equal(t, "codefly.dev/authority", strings.Split(authority.Interface, "@")[0])
+	require.Empty(t, authority.Name, "the interface requirement names no service")
+	require.Empty(t, authority.Module, "the interface requirement names no module")
+
+	// The authority's hop. `external`: composed by the workspace that composes
+	// this solution, so it consumes no endpoint and derives no mesh allow rule
+	// — it names the edge and opens none.
+	hop := document.Dependencies[1]
+	require.Equal(t, "authority", hop.Module)
+	require.Equal(t, "hop", hop.Name)
+	require.Equal(t, "external", hop.Kind,
+		"a hop edge that is not external derives a mesh allow rule to the hop's service")
+
+	// The one endpoint, with the readiness probe the scaffolded backend answers.
+	require.Len(t, document.Endpoints, 1, "a solution backend exposes one endpoint")
+	require.Equal(t, "http", document.Endpoints[0].Name)
+	require.Equal(t, "/health", document.Endpoints[0].Health.Readiness.Path)
+}
+
+// templateActions stand where a value goes, so each becomes a scalar before
+// the YAML is parsed: `{{ … }}` opens a YAML flow mapping, and that is the
+// example's rendering, not its shape.
+var templateActions = regexp.MustCompile(`\{\{[^{}]*\}\}`)
+
+// fencedYAML is the one fenced yaml block in a Markdown template.
+func fencedYAML(t *testing.T, content string) string {
+	t.Helper()
+	require.NotEmpty(t, content)
+	_, after, found := strings.Cut(content, "```yaml\n")
+	require.True(t, found, "the template shows no fenced yaml example")
+	body, _, closed := strings.Cut(after, "\n```")
+	require.True(t, closed, "the fenced yaml example is never closed")
+	return templateActions.ReplaceAllString(body, "example")
 }
 
 // TestNoTemplateCarriesProductContent. This agent is published from
