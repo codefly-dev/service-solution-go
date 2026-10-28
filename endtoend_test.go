@@ -2,9 +2,7 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,12 +10,14 @@ import (
 
 // THE VERIFICATION BAR, run rather than asserted.
 //
-// Every other test in this package reads a template. This one scaffolds a
-// solution the way `codefly add solution` scaffolds one, completes it the way
-// the CLI completes it, and then COMPILES it and runs the suite it ships
-// with. A template that renders into Go that does not build, or into a tree
-// whose own gates are red the moment it lands, passes every other test here
-// and fails this one.
+// base_test.go compiles base/, which is the hand-written source. This compiles
+// what a USER ends up with, which is a different thing and can fail while
+// base/ is green: it goes through this agent's own Create — the generated
+// templates rendered with the scaffold context, plus the two files the agent
+// writes itself (consumed_gen.go and the interface document) — and then
+// completes the tree the way the CLI completes it. A replacement that renders
+// into Go that does not compile, or an agent-written file that disagrees with
+// what the templates expect, passes every other test here and fails this one.
 //
 // It is what caught both defects this file was added with: a solution that
 // consumed anything was born red, because the runtime refuses a consumed
@@ -74,39 +74,11 @@ func completeAsTheCLIDoes(t *testing.T, backend string) {
 	// What `codefly add service` writes before the solution's own block: the
 	// identity and the source convention. `spec.source-dir: .` is this agent's
 	// (service.go says why the module is at the service root).
-	base := "kind: service\nname: " + backendService + "\nversion: 0.0.0\n" +
+	header := "kind: service\nname: " + backendService + "\nversion: 0.0.0\n" +
 		"agent:\n    publisher: " + agent.Publisher + "\n    kind: codefly:service\n" +
 		"    name: " + agent.Name + "\n    version: " + agent.Version + "\n" +
 		"spec:\n    source-dir: " + solutionSourceDir + "\n"
 	declared := fencedYAML(t, read(t, filepath.Join(backend, "GETTING_STARTED.md")))
 	require.NoError(t, os.WriteFile(filepath.Join(backend, "service.codefly.yaml"),
-		[]byte(base+declared+"\n"), 0o600))
-}
-
-// goToolchain is the `go` to build the scaffolded module with, or a skip. The
-// agent itself is a Go program, so a tree that can run this package has one;
-// the skip is for a sandbox that has stripped PATH.
-func goToolchain(t *testing.T) string {
-	t.Helper()
-	tool, err := exec.LookPath("go")
-	if err != nil {
-		t.Skip("no go toolchain on PATH to build the scaffolded solution with")
-	}
-	return tool
-}
-
-// run is one go command in the scaffolded backend, with its full output on
-// failure: what failed to compile is the finding, not the exit status.
-//
-// GOWORK=off keeps the scaffolded module out of any go.work the agent's own
-// checkout sits in — it is a separate module in a temporary directory, and a
-// workspace would try to resolve it against this repository's.
-func run(t *testing.T, goTool, dir string, args ...string) {
-	t.Helper()
-	command := exec.Command(goTool, args...)
-	command.Dir = dir
-	command.Env = append(os.Environ(), "GOWORK=off")
-	output, err := command.CombinedOutput()
-	require.NoErrorf(t, err, "`go %s` in the scaffolded backend:\n%s",
-		strings.Join(args, " "), output)
+		[]byte(header+declared+"\n"), 0o600))
 }

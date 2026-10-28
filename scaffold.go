@@ -79,10 +79,6 @@ type scaffold struct {
 	// identifier fails inside a bundler — the last hand-scaffolded solution's
 	// final friction item. newScaffold refuses it here instead.
 	Identifier string
-	// RuntimeVersion is the solution runtime the scaffolded go.mod pins,
-	// stated here so the generated README and GETTING_STARTED name the same
-	// pin the module requires.
-	RuntimeVersion string
 	// InterfaceDescription and OperationPrefix are the two values the
 	// interface document carries that are derived rather than typed. They are
 	// in the context, rather than only in the scaffolded openapi.go, because
@@ -102,6 +98,10 @@ type scaffold struct {
 // commit that may never reach a tag. factory_test.go holds the template to
 // this constant and to that floor.
 const solutionRuntimeVersion = "v0.0.16"
+
+// solutionRuntimePath is the module that pin names. It is the module a
+// consumer's consumed-API gate looks for in a solution backend's go.mod.
+const solutionRuntimePath = "github.com/codefly-dev/solution-runtime-go"
 
 // jsIdentifier is what Module Federation can emit a remote's name as.
 var jsIdentifier = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
@@ -125,7 +125,6 @@ func newScaffold(info *services.Information) (scaffold, error) {
 		SolutionID:           id,
 		Title:                titleFrom(id),
 		Identifier:           identifier,
-		RuntimeVersion:       solutionRuntimeVersion,
 		InterfaceDescription: interfaceDescription(id),
 		OperationPrefix:      aliasField(id),
 	}, nil

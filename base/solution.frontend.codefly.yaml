@@ -1,0 +1,8 @@
+# The page declaration, as `codefly add solution --title` writes it. It is here
+# so base/ compiles — main.go embeds it, and //go:embed cannot reach a file
+# that does not exist — and it is excluded from generation, because the CLI
+# writes this file itself after Create returns.
+title: Codefly Base
+order: 60
+exposed_module: ./Page
+host_contract: 1

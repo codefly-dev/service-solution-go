@@ -77,6 +77,11 @@ var readmeFS embed.FS
 // factoryFS is the solution backend: what Create writes into the service
 // directory.
 //
+// IT IS GENERATED FROM base/, never hand-edited (AGENTS.md). base/ is a real
+// solution backend that compiles and whose own suite is the suite every
+// scaffolded solution ships with, and `go test -update` regenerates this tree
+// from it. factory_test.go fails on any difference.
+//
 //go:embed all:templates/factory
 var factoryFS embed.FS
 
@@ -85,6 +90,21 @@ var factoryFS embed.FS
 // it is an npm package, not a Codefly service — and nothing else does either,
 // which is why a solution's page has been hand-copied out of a sibling every
 // time (codefly-dev/cli#1217).
+//
+// THIS TREE IS HAND-WRITTEN, unlike templates/factory. Two reasons, and the
+// first is structural: core's generator.GenerateServiceTemplate produces
+// templates/factory from base/ and nothing else, and this tree is written to a
+// SIBLING of the service directory rather than into it, so there is no base/
+// subdirectory it could come from. The second is that the benefit of a base/ —
+// that it compiles and is tested — needs `npm install`, and the five
+// @codefly-dev kits it depends on are on GitHub Packages behind a
+// read:packages token. A base-page/ generated the same way is the right shape
+// once CI holds that token and `npm test` would prove something; until then it
+// would be a second generator for no verification.
+//
+// What holds this tree instead: TestThePageSharesEveryHostSingleton pins every
+// entry of the Module Federation share policy, which is the part whose failure
+// is invisible until a browser loads the remote inside a real host.
 //
 //go:embed all:templates/page
 var pageFS embed.FS

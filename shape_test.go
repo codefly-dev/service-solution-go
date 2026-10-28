@@ -179,7 +179,26 @@ var mayMentionModuleEdges = map[string]string{
 // host's own door: the authority interface required by `interface:` alone, and
 // `authority/hop` as `kind: external`.
 func TestTheExampleManifestIsTheHostsDoorOnly(t *testing.T) {
-	var document struct {
+	assertHostsDoorOnly(t, fencedYAML(t, templateText(t)["templates/factory/GETTING_STARTED.md.tmpl"]))
+}
+
+// assertHostsDoorOnly reads a solution backend's manifest STRUCTURALLY and
+// holds it to the host's own door, as obin-ai/core-solutions'
+// check_solution_mesh.py reads a real manifest and for the same reason: four
+// spellings of one object defeat a pattern scan, and all four parse to the
+// same value. An earlier line-regex here read `- name: grpc` — an endpoint of
+// the hop — as a module edge, and would have read a real edge spelled as a
+// flow mapping as nothing at all.
+//
+// Two manifests are held to this, and neither is written by this agent:
+// GETTING_STARTED.md's fenced example, which an author copies when the service
+// was added with `codefly add service` rather than `codefly add solution`, and
+// base/service.codefly.yaml, which base/'s own suite reads to refuse an edge.
+// Both must be what the CLI writes, or what they teach and what they check is
+// a manifest no solution has.
+func assertHostsDoorOnly(t *testing.T, document string) {
+	t.Helper()
+	var declared struct {
 		ModuleIdentity bool `yaml:"module-identity"`
 		Dependencies   []struct {
 			Interface string `yaml:"interface"`
@@ -196,20 +215,18 @@ func TestTheExampleManifestIsTheHostsDoorOnly(t *testing.T) {
 			} `yaml:"health"`
 		} `yaml:"endpoints"`
 	}
-	example := fencedYAML(t, templateText(t)["templates/factory/GETTING_STARTED.md.tmpl"])
-	require.NoError(t, yaml.Unmarshal([]byte(example), &document),
-		"the example an author copies must be readable YAML")
+	require.NoError(t, yaml.Unmarshal([]byte(document), &declared), "the manifest must be readable YAML")
 
-	require.True(t, document.ModuleIdentity,
+	require.True(t, declared.ModuleIdentity,
 		"a solution backend presents the solution's identity: the authority takes its workload credential as the actor of every Work Context it issues")
-	require.Len(t, document.Dependencies, 2,
+	require.Len(t, declared.Dependencies, 2,
 		"the host's door is the authority interface and its hop, and nothing else")
 
 	// The interface, required by `interface:` alone so the workspace binds it
 	// to the one authority in scope. check_solution_mesh reads an
 	// interface-only entry as the door; one that also names a service is an
 	// ordinary module edge, and the hop is a door ONLY beside this entry.
-	authority := document.Dependencies[0]
+	authority := declared.Dependencies[0]
 	require.Equal(t, "codefly.dev/authority", strings.Split(authority.Interface, "@")[0])
 	require.Empty(t, authority.Name, "the interface requirement names no service")
 	require.Empty(t, authority.Module, "the interface requirement names no module")
@@ -217,16 +234,16 @@ func TestTheExampleManifestIsTheHostsDoorOnly(t *testing.T) {
 	// The authority's hop. `external`: composed by the workspace that composes
 	// this solution, so it consumes no endpoint and derives no mesh allow rule
 	// — it names the edge and opens none.
-	hop := document.Dependencies[1]
+	hop := declared.Dependencies[1]
 	require.Equal(t, "authority", hop.Module)
 	require.Equal(t, "hop", hop.Name)
 	require.Equal(t, "external", hop.Kind,
 		"a hop edge that is not external derives a mesh allow rule to the hop's service")
 
 	// The one endpoint, with the readiness probe the scaffolded backend answers.
-	require.Len(t, document.Endpoints, 1, "a solution backend exposes one endpoint")
-	require.Equal(t, "http", document.Endpoints[0].Name)
-	require.Equal(t, "/health", document.Endpoints[0].Health.Readiness.Path)
+	require.Len(t, declared.Endpoints, 1, "a solution backend exposes one endpoint")
+	require.Equal(t, "http", declared.Endpoints[0].Name)
+	require.Equal(t, "/health", declared.Endpoints[0].Health.Readiness.Path)
 }
 
 // templateActions stand where a value goes, so each becomes a scalar before

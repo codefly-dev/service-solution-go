@@ -20,7 +20,7 @@ const interfaceArtifactPath = "openapi/api.swagger.json"
 func renderInterfaceArtifact(dir string) ([]byte, error) {
 	return server().InterfaceArtifact(dir, solution.InterfaceInfo{
 		Title:       "{{ .SolutionID }} solution backend",
-		Description: "{{ .InterfaceDescription }}",
+		Description: "The {{ .SolutionID }} solution's backend under the authority interface, at the route the authority's edge forwards it on: the routes it serves itself, and the module calls the solution runtime relays as the viewer. A relayed call is any checked caller's, because the child the authority issues through this solution's binding for that module, and the module's own method policy, gate it.",
 		// No base path: every route already carries /v1/{{ .SolutionID }}, as served.
 		OperationPrefix: "{{ .OperationPrefix }}",
 		Tag:             solutionID,

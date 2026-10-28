@@ -1,14 +1,14 @@
-# The {{ .Module.Name.LowerCase }} solution's backend
+# The {{ .SolutionID }} solution's backend
 
 Scaffolded by `codefly.dev/solution-go`. Two directories were written:
 
-- `services/{{ .Service.Name.LowerCase }}` — this service, the solution's entry service.
+- `services/backend` — this service, the solution's entry service.
 - `services/fe-remote` — the `./Page` Module Federation remote. An npm package,
   not a Codefly service, which is why nothing else writes it.
 
 ## What is left, in order
 
-1. `cd services/{{ .Service.Name.LowerCase }} && go build ./... && go test ./...`
+1. `cd services/backend && go build ./... && go test ./...`
 2. `cd services/fe-remote && npm install && npm test && npm run typecheck`
    The `@codefly-dev/*` kits come from GitHub Packages, so `NODE_AUTH_TOKEN`
    must be set to a token with `read:packages` (see `.npmrc`).
@@ -44,7 +44,7 @@ service-dependencies:
       - name: grpc
 workspace-configuration-dependencies:
   - authority
-  - {{ .Module.Name.LowerCase }}
+  - {{ .SolutionID }}
 endpoints:
   - name: http
     visibility: public
