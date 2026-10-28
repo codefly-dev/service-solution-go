@@ -1,0 +1,28 @@
+# The agent binary
+service-solution-go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go workspace (keep the module-level go.mod pinned)
+go.work
+go.work.sum
+
+# Test binaries
+*.test
+
+# Coverage + cache
+*.out
+*.hash
+
+# GoReleaser
+dist/
+
+# Local agent CI artifacts (binaries, reports, SBOMs)
+.codefly/
+
+# Editor
+.idea
+.vscode
