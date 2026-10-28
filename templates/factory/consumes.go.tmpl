@@ -22,12 +22,32 @@ import (
 // module methods it may call, which are constants of that module's generated
 // Go client.
 //
-// A module with no entry in `composition` below is declared with no method, so
-// nothing of it is reachable. That is the scaffolded state.
+// A MODULE WITH NO COMPOSED METHOD IS NOT DECLARED HERE AT ALL, and the
+// difference is not cosmetic: the runtime refuses a consumed module that
+// declares no method ("consumed module %q declares no methods") and that
+// refusal stops the boot. Declaring an uncomposed entry as an empty module
+// would therefore not mean "nothing of it is reachable" — it would mean the
+// solution does not start.
+//
+// Skipping it says the same thing the empty declaration was reaching for:
+// nothing of that module is reachable through this backend. Two different
+// things arrive here that way, and both are meant to:
+//
+//   - a module whose methods nobody has composed YET. It is in api.consumes,
+//     so the composition delivers its binding; it reaches nothing until
+//     someone fills `composition` in below. A freshly scaffolded solution is
+//     entirely in this state, and starts.
+//   - a module this backend never relays. api.consumes names every module the
+//     solution reaches ANYWHERE, and a module the page calls at the
+//     authority's edge is not relayed through here. The reference solution
+//     declares six and relays two.
 func consumed() []solution.ConsumedModule {
 	modules := make([]solution.ConsumedModule, 0, len(consumedAsAll))
 	for _, as := range consumedAsAll {
 		declared := composition[as]
+		if len(declared.Methods) == 0 {
+			continue
+		}
 		modules = append(modules, solution.ConsumedModule{
 			As:        as,
 			Scopes:    declared.Scopes,

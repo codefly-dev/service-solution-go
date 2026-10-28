@@ -17,28 +17,63 @@ const solutionManifestPath = "../../solution.codefly.yaml"
 // serviceManifestPath is this service's manifest, beside this file.
 const serviceManifestPath = "service.codefly.yaml"
 
-// TestConsumedMatchesTheManifest is the static half of a check that otherwise
-// only shows up at a boot nobody runs until the page is broken.
+// TestTheGeneratedConsumptionMatchesTheManifest is THE DRIFT CHECK, and the
+// reason consumption is generated rather than written twice.
 //
-// consumed_gen.go is generated from api.consumes by `codefly sync`, and
-// consumed() is derived from it, so the two cannot name different modules.
-// What CAN go stale is the generated file itself: a module added to
-// api.consumes reaches nothing until `codefly sync` runs. This fails until it
-// has.
-func TestConsumedMatchesTheManifest(t *testing.T) {
-	declared := []string{}
-	for _, module := range consumed() {
-		declared = append(declared, module.As)
-	}
-	slices.Sort(declared)
+// consumed_gen.go is generated from api.consumes by `codefly sync`. It must
+// name exactly what the manifest names: a module added to api.consumes reaches
+// nothing until `codefly sync` has run, and that is invisible until the page
+// calls it. This fails until it has run.
+//
+// It is the GENERATED file that is compared, not consumed() — see the two
+// tests below for why those are different sets.
+func TestTheGeneratedConsumptionMatchesTheManifest(t *testing.T) {
+	generated := append([]string{}, consumedAsAll...)
+	slices.Sort(generated)
 
 	wanted := append([]string{}, manifestAliases(t)...)
 	slices.Sort(wanted)
 
-	if !slices.Equal(declared, wanted) {
-		t.Fatalf("this backend consumes %v; %s declares %v.\n"+
+	if !slices.Equal(generated, wanted) {
+		t.Fatalf("consumed_gen.go names %v; %s declares %v.\n"+
 			"consumed_gen.go is generated from api.consumes: run `codefly sync` and commit it.",
-			declared, solutionManifestPath, wanted)
+			generated, solutionManifestPath, wanted)
+	}
+}
+
+// TestThisBackendRelaysOnlyWhatTheManifestDeclares is the direction that must
+// hold absolutely: a module this backend relays but the manifest does not
+// declare has no delivered binding, so the runtime refuses the boot naming it.
+//
+// THE REVERSE IS NOT A FAILURE, and that is the point of having two tests.
+// api.consumes names every module the solution reaches ANYWHERE — the page
+// reaches modules at the authority's edge with their own clients, and those
+// are never relayed through this backend. The reference solution declares six
+// consumed modules and relays two. An entry this backend does not relay is
+// also the state of every entry in a freshly scaffolded solution, until
+// someone composes its methods in consumes.go.
+func TestThisBackendRelaysOnlyWhatTheManifestDeclares(t *testing.T) {
+	declared := map[string]bool{}
+	for _, as := range consumedAsAll {
+		declared[as] = true
+	}
+	for _, module := range consumed() {
+		if !declared[module.As] {
+			t.Errorf("this backend relays %q, which %s does not declare: the composition delivers no binding for it and the runtime refuses the boot naming it",
+				module.As, solutionManifestPath)
+		}
+	}
+}
+
+// TestEveryRelayedModuleDeclaresAMethod: the runtime refuses a consumed module
+// that declares no method, and that refusal stops the boot. consumed() leaves
+// an uncomposed module out for exactly that reason, so this fails only if that
+// filter is ever removed — here, in `go test`, rather than at a boot.
+func TestEveryRelayedModuleDeclaresAMethod(t *testing.T) {
+	for _, module := range consumed() {
+		if len(module.Methods) == 0 {
+			t.Errorf("%q is relayed but declares no method: the runtime refuses a consumed module with none and the boot fails", module.As)
+		}
 	}
 }
 
