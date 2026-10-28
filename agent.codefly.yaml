@@ -1,0 +1,15 @@
+publisher: codefly.dev
+kind: codefly:service
+name: solution-go
+version: 0.0.1
+release:
+  owner: workflow
+  workflow: releaser.yml
+# Self-hosted: this agent is a Go program, so it builds itself for a host with
+# no codefly.dev service agent installed yet (docs/agent-compatibility.md,
+# "Self-hosted packaging"). Naming another agent's release here would make
+# every release of THIS agent wait on a bump of that one.
+source:
+  directory: .
+  agent: self
+  bootstrap: [./bootstrap-agent]

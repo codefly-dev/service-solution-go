@@ -1,0 +1,72 @@
+version: 2
+
+sboms:
+  - id: archives
+    artifacts: archive
+    documents:
+      - "${artifact}.sbom.json"
+    disable: false
+
+project_name: service-solution-go
+
+# A prerelease tag (a `codefly publish dev` build, v<version>-dev.<sha>) is
+# published as a GitHub prerelease, never as Latest, so `version: latest` can
+# never resolve to a dev build. Release tags are unaffected.
+release:
+  prerelease: auto
+
+builds:
+  # ARCHITECTURE: core's authoritative source inspection uses real tree-sitter
+  # grammars. Agent releases therefore require CGO and the platform compilers
+  # supplied by goreleaser/goreleaser-cross; disabling CGO would silently make
+  # the production parser impossible to ship.
+  - id: darwin-amd64
+    binary: service-solution-go
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    goos:
+      - darwin
+    goarch:
+      - amd64
+  - id: darwin-arm64
+    binary: service-solution-go
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    goos:
+      - darwin
+    goarch:
+      - arm64
+  - id: linux-amd64
+    binary: service-solution-go
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - amd64
+  - id: linux-arm64
+    binary: service-solution-go
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    goos:
+      - linux
+    goarch:
+      - arm64
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    # Must match core's downloader: service-{name}_{version}_{os}_{arch}.tar.gz
+    # (resources.AgentKindRegistration.GitHubAsset); the binary inside is
+    # service-{name}. For this agent {name} is solution-go, so both are
+    # service-solution-go. release_test.go pins it.
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"

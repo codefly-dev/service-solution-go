@@ -1,0 +1,26 @@
+# {{ .Service.Name.Title }} — a solution backend
+
+This service is the entry service of the `{{ .Module.Name.LowerCase }}` solution: the
+workload a host installs, built on
+[`solution-runtime-go`](https://github.com/codefly-dev/solution-runtime-go).
+
+The runtime does everything a solution needs identically — it presents what the
+solution is, answers `/health`, serves the page's calls, and relays the page's
+module calls to the authority's hop **as the viewer**, where each module
+authorizes the call. What lives here is this solution's own composition:
+
+| file | what it says |
+|---|---|
+| `main.go` | what the solution is: its id, its contract, its capabilities |
+| `operations.go` | the routes this backend serves itself, each with the policy a call must hold |
+| `consumes.go` | per consumed module: the authority asked for the viewer, and the methods that may be called |
+| `consumed_gen.go` | **generated** from `api.consumes` — `codefly sync` rewrites it |
+| `openapi/api.swagger.json` | **generated** from the routes above — `go generate ./...` rewrites it |
+
+A solution reaches every module through the authority's hop, which checks the
+call. It therefore declares **no** `service-dependencies` edge on a module it
+consumes: Codefly renders such an edge into a mesh allow rule straight to that
+module's service, past the check. `consumes_test.go` holds this service to that.
+
+The page this solution serves is `../fe-remote` — the `./Page` Module
+Federation remote, an npm package rather than a Codefly service.
