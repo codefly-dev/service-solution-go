@@ -8,8 +8,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"text/template"
 
 	"github.com/codefly-dev/core/agents/generator"
+	"github.com/codefly-dev/core/agents/services"
 	"github.com/codefly-dev/core/generation"
 	"github.com/codefly-dev/core/resources"
 	"github.com/stretchr/testify/require"
@@ -82,15 +84,28 @@ func TestGeneratedTemplatesCarryNoBaseSolutionName(t *testing.T) {
 // fails at Create, in a user's terminal. Every action in the generated tree
 // must be one this agent can fill, which the scaffold tests below prove by
 // rendering the whole tree; this states the narrower rule the replacements
-// must obey.
+// must obey, and states it by RENDERING each one rather than by listing the
+// fields that happen to exist today — a list goes stale silently, and the
+// thing being checked is whether the action resolves.
 func TestGeneratedTemplatesRenderWithTheScaffoldContext(t *testing.T) {
-	known := map[string]bool{
-		"{{ .SolutionID }}": true, "{{ .Title }}": true, "{{ .OperationPrefix }}": true,
-	}
+	identity := &resources.ServiceIdentity{Name: backendService, Module: "notes", Workspace: "workspace"}
+	fill, err := newScaffold(&services.Information{
+		Service: resources.ToServiceWithCase(identity),
+		Module:  resources.ToModuleWithCase(identity),
+		Agent:   agent,
+	})
+	require.NoError(t, err)
+
 	for _, replacement := range baseGeneration(t).Replacements {
-		require.Containsf(t, known, replacement.To,
-			"base/service.generation.codefly.yaml replaces %q with %q, which the scaffold context does not carry",
+		action, parseErr := template.New("replacement").Parse(replacement.To)
+		require.NoErrorf(t, parseErr, "%q is not a template", replacement.To)
+		var rendered strings.Builder
+		require.NoErrorf(t, action.Execute(&rendered, fill),
+			"base/service.generation.codefly.yaml replaces %q with %q, which the scaffold context cannot fill",
 			replacement.From, replacement.To)
+		require.NotEmptyf(t, strings.TrimSpace(rendered.String()),
+			"%q renders empty: every scaffolded solution would carry a blank where %q stood",
+			replacement.To, replacement.From)
 	}
 }
 

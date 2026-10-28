@@ -17,9 +17,31 @@
 # which are derived from it exactly as scaffold.go derives them for a real
 # solution:
 #
-#   codefly-base   the solution id        -> SolutionID      (scaffold.go: Module.Name.LowerCase)
-#   Codefly Base   the placeholder title  -> Title           (titleFrom)
-#   CodeflyBase    the operation prefix   -> OperationPrefix (aliasField)
+#   codefly-base   the solution id        -> Module.Name.LowerCase
+#   Codefly Base   the placeholder title  -> Title           (scaffold.go titleFrom)
+#   CodeflyBase    the operation prefix   -> OperationPrefix (scaffold.go aliasField)
+#
+# THE SOLUTION ID IS SPELLED `.Module.Name.LowerCase`, NOT `.SolutionID`, AND
+# THE DIFFERENCE IS NOT COSMETIC — they are the same value (scaffold.go derives
+# SolutionID from exactly that field), but they are not renderable in the same
+# places. templates/factory/GETTING_STARTED.md is rendered TWICE and by two
+# different callers:
+#
+#   - by this agent's Create, with the scaffold context, into the service
+#     directory;
+#   - by CORE, at builder Load in creation mode, with a bare
+#     *services.Information and nothing else
+#     (core/agents/services/base_builder.go: ApplyTemplateFrom(...,
+#     "templates/factory/GETTING_STARTED.md", s.Information)) — which is what
+#     `codefly add service` prints to the author.
+#
+# Information carries Service, Module and Agent. It has no SolutionID, so
+# `{{ .SolutionID }}` there is not an empty render but a hard failure —
+# "can't evaluate field SolutionID in type *services.Information" — and the
+# whole `codefly add solution` dies after the module has already been written.
+# `.Module.Name.LowerCase` is a field BOTH contexts carry (the scaffold context
+# embeds *services.Information), so one spelling renders under both.
+# advertisement_test.go renders this template the way core does.
 #
 # The fourth, `codefly_base`, is the JavaScript identifier and appears only in
 # templates/page, which is not generated from here (it is an npm package, not a
@@ -39,7 +61,7 @@ replacements:
   - from: Codefly Base
     to: "{{ .Title }}"
   - from: codefly-base
-    to: "{{ .SolutionID }}"
+    to: "{{ .Module.Name.LowerCase }}"
 ignores:
   # This file.
   - service.generation.codefly.yaml

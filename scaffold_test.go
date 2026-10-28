@@ -28,6 +28,22 @@ func scaffoldInto(t *testing.T, module, manifest string) (root string) {
 	if manifest != "" {
 		require.NoError(t, os.WriteFile(filepath.Join(root, "solution.codefly.yaml"), []byte(manifest), 0o600))
 	}
+	builder := builderFor(t, root, module)
+	ctx := context.Background()
+	context, err := newScaffold(builder.Information)
+	require.NoError(t, err)
+	require.NoError(t, builder.scaffoldSolution(ctx, context))
+	require.NoError(t, builder.writeGeneratedConsumption(ctx))
+	require.NoError(t, builder.writeInterfaceArtifact(ctx, context, "0.0.0"))
+	return root
+}
+
+// builderFor is this agent loaded against <root>/services/backend, the way
+// core loads it before any lifecycle call. It is shared by scaffoldInto and by
+// syncAsTheCLIDoes, so what Create runs and what Sync runs are the same agent
+// against the same tree.
+func builderFor(t *testing.T, root, module string) *Builder {
+	t.Helper()
 	location := filepath.Join(root, "services", backendService)
 	require.NoError(t, os.MkdirAll(location, 0o750))
 
@@ -40,15 +56,16 @@ func scaffoldInto(t *testing.T, module, manifest string) (root string) {
 		Module:  resources.ToModuleWithCase(identity),
 		Agent:   agent,
 	}
+	return NewBuilder(svc)
+}
 
-	builder := NewBuilder(svc)
-	ctx := context.Background()
-	context, err := newScaffold(svc.Base.Information)
-	require.NoError(t, err)
-	require.NoError(t, builder.scaffoldSolution(ctx, context))
-	require.NoError(t, builder.writeGeneratedConsumption(ctx))
-	require.NoError(t, builder.writeInterfaceArtifact(ctx, context, "0.0.0"))
-	return root
+// syncAsTheCLIDoes is `codefly sync service <module>/backend`: the agent's
+// Sync, which re-renders consumed_gen.go from the solution manifest as it now
+// stands. It is a distinct step from Create because the manifest does not
+// exist when Create runs — see TestAScaffoldedSolutionBuildsAndPassesItsOwnGates.
+func syncAsTheCLIDoes(t *testing.T, root, module string) {
+	t.Helper()
+	require.NoError(t, builderFor(t, root, module).writeGeneratedConsumption(context.Background()))
 }
 
 // emptyManifest is a solution manifest that consumes nothing — what `codefly

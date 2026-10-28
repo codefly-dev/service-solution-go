@@ -27,9 +27,9 @@ import (
 var frontendDeclaration []byte
 
 // solutionID is this solution's ONE name: the id the host's presence document
-// names it by, the alias the authority's edge routes it at (/v1/{{ .SolutionID }}),
+// names it by, the alias the authority's edge routes it at (/v1/{{ .Module.Name.LowerCase }}),
 // the principal the authority issues to, and the Codefly module name.
-const solutionID = "{{ .SolutionID }}"
+const solutionID = "{{ .Module.Name.LowerCase }}"
 
 // manifest is what this solution is.
 //

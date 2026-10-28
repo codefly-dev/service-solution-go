@@ -1,4 +1,4 @@
-# The {{ .SolutionID }} solution's backend
+# The {{ .Module.Name.LowerCase }} solution's backend
 
 Scaffolded by `codefly.dev/solution-go`. Two directories were written:
 
@@ -44,7 +44,7 @@ service-dependencies:
       - name: grpc
 workspace-configuration-dependencies:
   - authority
-  - {{ .SolutionID }}
+  - {{ .Module.Name.LowerCase }}
 endpoints:
   - name: http
     visibility: public

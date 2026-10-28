@@ -247,9 +247,17 @@ func goToolchain(t *testing.T) string {
 // try to resolve it against this repository's.
 func run(t *testing.T, goTool, dir string, args ...string) {
 	t.Helper()
+	output, err := attempt(t, goTool, dir, args...)
+	require.NoErrorf(t, err, "`go %s` in %s:\n%s", strings.Join(args, " "), dir, output)
+}
+
+// attempt is run without the assertion, for the one caller that expects a
+// failure and has something to say about which one it is.
+func attempt(t *testing.T, goTool, dir string, args ...string) (string, error) {
+	t.Helper()
 	command := exec.Command(goTool, args...)
 	command.Dir = dir
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()
-	require.NoErrorf(t, err, "`go %s` in the staged base/:\n%s", strings.Join(args, " "), output)
+	return string(output), err
 }

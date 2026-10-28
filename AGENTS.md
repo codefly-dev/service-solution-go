@@ -53,14 +53,32 @@ derived from the name exactly as `scaffold.go` derives it for a real solution:
 
 | in `base/` | becomes | derived by |
 |---|---|---|
-| `codefly-base` | `{{ .SolutionID }}` | `Module.Name.LowerCase` |
-| `Codefly Base` | `{{ .Title }}` | `titleFrom` |
-| `CodeflyBase` | `{{ .OperationPrefix }}` | `aliasField` |
+| `codefly-base` | `{{ .Module.Name.LowerCase }}` | core's own `Information` |
+| `Codefly Base` | `{{ .Title }}` | `scaffold.go` `titleFrom` |
+| `CodeflyBase` | `{{ .OperationPrefix }}` | `scaffold.go` `aliasField` |
 
 Order matters and no `from` may be a substring of an earlier `to`.
 `TestGeneratedTemplatesCarryNoBaseSolutionName` fails if any spelling of
 `codefly-base` survives into a template, which is what catches a new
 capitalisation introduced in `base/` that no replacement covers.
+
+**The solution id is spelled `.Module.Name.LowerCase`, never `.SolutionID`.**
+They are the same value — `scaffold.go` derives `SolutionID` from exactly that
+field — but not renderable in the same places. Two files in a generated tree
+are rendered by CORE rather than by this agent, each with a bare
+`*services.Information` that carries only `Service`, `Module` and `Agent`:
+
+| rendered by core | when | where |
+|---|---|---|
+| `templates/factory/GETTING_STARTED.md` | builder Load, creation mode | `core/agents/services/base_builder.go` |
+| `templates/agent/README.md` | `GetAgentInformation`, before any service exists | this repo's `service.go` |
+
+`{{ .SolutionID }}` there is not an empty render but a hard failure — *can't
+evaluate field SolutionID in type \*services.Information* — and
+`codefly add solution` dies with the module already written. The agent README
+takes no values at all for the same reason: at advertisement time `Service` and
+`Module` are themselves nil. `advertisement_test.go` renders both the way core
+renders them.
 
 `backend` is **not** replaced. A solution's entry service is named `backend` by
 the shape's own definition — the CLI's `solutionEntryService` and this agent's

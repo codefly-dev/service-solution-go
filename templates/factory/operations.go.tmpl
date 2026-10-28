@@ -27,7 +27,7 @@ const route = "/v1/" + solutionID
 //		Callers:  "The page's Notes view.",
 //		Behavior: "Answers the viewer's own notes, newest first, 50 at a time.",
 //		Response: notesResponse{},
-//		Policy:   solution.Requires("{{ .SolutionID }}.note", "read"),
+//		Policy:   solution.Requires("{{ .Module.Name.LowerCase }}.note", "read"),
 //		Handler:  listNotes,
 //	}
 //
