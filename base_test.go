@@ -141,7 +141,8 @@ func TestBaseConsumptionIsWhatThisAgentGenerates(t *testing.T) {
 // and it must come from the same render — otherwise base/'s suite passes on
 // bytes a scaffolded tree would never hold.
 func TestBaseInterfaceDocumentIsTheRuntimesRender(t *testing.T) {
-	server := solution.New(solution.Manifest{ID: baseSolutionID, Contract: baseSolutionID})
+	server := solution.New(solution.Manifest{ID: baseSolutionID, Contract: baseSolutionID}).
+		Operations(scaffoldedOperations(baseSolutionID)...)
 	document, err := server.InterfaceArtifact("", solution.InterfaceInfo{
 		Title:           baseSolutionID + " solution backend",
 		Version:         "0.0.0",

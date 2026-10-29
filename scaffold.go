@@ -214,7 +214,8 @@ func (s *Builder) writeGeneratedConsumption(ctx context.Context) error {
 // service.codefly.yaml, which `CreateResponse` has not written yet when this
 // runs.
 func (s *Builder) writeInterfaceArtifact(ctx context.Context, context scaffold, version string) error {
-	server := solution.New(solution.Manifest{ID: context.SolutionID, Contract: context.SolutionID})
+	server := solution.New(solution.Manifest{ID: context.SolutionID, Contract: context.SolutionID}).
+		Operations(scaffoldedOperations(context.SolutionID)...)
 	document, err := server.InterfaceArtifact("", solution.InterfaceInfo{
 		Title:           context.SolutionID + " solution backend",
 		Version:         version,
