@@ -11,6 +11,21 @@
         }
       },
       "type": "object"
+    },
+    "OverviewResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "solution": {
+          "type": "string"
+        }
+      },
+      "type": "object"
     }
   },
   "info": {
@@ -18,7 +33,73 @@
     "title": "codefly-base solution backend",
     "version": "0.0.0"
   },
-  "paths": {},
+  "paths": {
+    "/v1/codefly-base/overview": {
+      "get": {
+        "description": "This solution's own page, to show that it is installed and reachable as the viewer\n\nAnswers the solution's id and the `as` name of every module this backend relays, in the order they are declared. Takes no parameters and reads nothing outside this backend",
+        "operationId": "CodeflyBase_Get_V1_Codefly-base_Overview",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OverviewResponse"
+            }
+          },
+          "401": {
+            "description": "The request carried no Work Context the authority checks for this solution.",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
+          "502": {
+            "description": "A call this operation makes to a module failed.",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        },
+        "summary": "report what this solution is and which modules it can reach",
+        "tags": [
+          "codefly-base"
+        ],
+        "x-codefly-authority-policy": {
+          "requires": [
+            {
+              "resource_kind": "codefly-base.page",
+              "actions": [
+                "read"
+              ]
+            }
+          ]
+        },
+        "x-codefly-operation": {
+          "attempt_timeout": "30s",
+          "audience": "codefly-base",
+          "backoff": "1s",
+          "completion": "COMPLETION_CALL",
+          "invoke_scopes": [
+            {
+              "actions": [
+                "read"
+              ],
+              "resource_kind": "codefly-base.page"
+            }
+          ],
+          "max_attempts": 3,
+          "recovery": "RECOVERY_RECOMPUTE",
+          "retryable_codes": [
+            "503"
+          ],
+          "tool": {
+            "description": "report what this solution is and which modules it can reach",
+            "effect": "EFFECT_READ_ONLY",
+            "name": "CodeflyBase_Get_V1_Codefly-base_Overview"
+          },
+          "total_timeout": "90s"
+        }
+      }
+    }
+  },
   "produces": [
     "application/json"
   ],
