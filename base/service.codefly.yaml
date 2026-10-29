@@ -1,0 +1,62 @@
+# The backend's manifest, as it stands once `codefly add solution` has run.
+#
+# This agent's Create writes NONE of the solution shape below: the CLI
+# (cli#1216, applyEntryServiceShape) states module-identity, the endpoints and
+# the service-dependencies on this manifest after Create returns. The file is
+# here so base/ is a real service whose own suite can run — consumes_test.go
+# reads it to refuse a module edge — and it is excluded from generation so no
+# scaffolded tree ever carries a second copy of the CLI's declarations.
+#
+# It is kept identical to what the CLI writes
+# (cmd/add/solution.go solutionEntryDependencies and solutionEntryEndpoint);
+# base_test.go fails if the two drift.
+kind: service
+name: backend
+version: 0.0.0
+agent:
+    publisher: codefly.dev
+    kind: codefly:service
+    name: solution-go
+    version: 0.0.1
+spec:
+    source-dir: .
+# The backend presents the solution's identity: the authority takes its
+# projected workload credential as the actor of every Work Context it issues
+# the solution, so the authority document the CLI renders from the module
+# contract approves this service's build.
+module-identity: true
+service-dependencies:
+  # The authority interface, required by `interface:` alone so the workspace
+  # binds it to the one authority in scope. check_solution_mesh reads an
+  # interface-only entry as the host's door.
+  - interface: codefly.dev/authority@>=0.2.0 <0.4.0
+  # The authority's hop: the one address the runtime's passthrough dials, which
+  # lets through only a call the authority checked. `external` — composed by
+  # the workspace that composes this solution, never started from here — so it
+  # consumes no endpoint and derives no mesh allow rule: it names the edge and
+  # opens none.
+  - name: hop
+    module: authority
+    kind: external
+    endpoints:
+      - name: grpc
+workspace-configuration-dependencies:
+  # The authority interface's address, and this solution's own slots: the
+  # <AS>_ENDPOINT and <AS>_BINDING each consumed module is reached through
+  # (consumes.go).
+  - authority
+  - codefly-base
+endpoints:
+  # The one endpoint a solution backend serves. `exposure: none` makes it
+  # reachable inside the cell and addressed from nowhere outside it — what the
+  # outside reaches is the host's own door.
+  - name: http
+    visibility: public
+    exposure: none
+    api: http
+    secured: false
+    health:
+      readiness:
+        kind: http
+        path: /health
+        statuses: ["200"]

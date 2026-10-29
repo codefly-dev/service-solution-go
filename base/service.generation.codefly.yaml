@@ -1,0 +1,101 @@
+# HOW base/ BECOMES templates/factory/.
+#
+# base/ is a REAL solution backend: it compiles, it has a go.sum, and its own
+# test suite is the suite every scaffolded solution ships with. templates/
+# factory/ is GENERATED from it by core's generator.GenerateServiceTemplate
+# (`codefly agent generate --service .`), which copies every file here, adds a
+# .tmpl suffix, and applies the literal replacements below.
+#
+# Nothing in templates/factory is hand-edited. factory_test.go regenerates into
+# a temporary directory and fails on any difference, and `go test -run
+# TestFactoryTemplatesAreGeneratedFromBase -update` is what moves it.
+#
+# The replacements are literal, whole-file string substitutions applied IN
+# ORDER (core's templates.ServiceReplacer), so each `from` must be a token that
+# appears nowhere else and no `from` may be a substring of an earlier `to`.
+# `codefly-base` is the base solution's name and is spelled four ways, three of
+# which are derived from it exactly as scaffold.go derives them for a real
+# solution:
+#
+#   codefly-base   the solution id        -> Module.Name.LowerCase
+#   Codefly Base   the placeholder title  -> Title           (scaffold.go titleFrom)
+#   CodeflyBase    the operation prefix   -> OperationPrefix (scaffold.go aliasField)
+#
+# THE SOLUTION ID IS SPELLED `.Module.Name.LowerCase`, NOT `.SolutionID`, AND
+# THE DIFFERENCE IS NOT COSMETIC — they are the same value (scaffold.go derives
+# SolutionID from exactly that field), but they are not renderable in the same
+# places. templates/factory/GETTING_STARTED.md is rendered TWICE and by two
+# different callers:
+#
+#   - by this agent's Create, with the scaffold context, into the service
+#     directory;
+#   - by CORE, at builder Load in creation mode, with a bare
+#     *services.Information and nothing else
+#     (core/agents/services/base_builder.go: ApplyTemplateFrom(...,
+#     "templates/factory/GETTING_STARTED.md", s.Information)) — which is what
+#     `codefly add service` prints to the author.
+#
+# Information carries Service, Module and Agent. It has no SolutionID, so
+# `{{ .SolutionID }}` there is not an empty render but a hard failure —
+# "can't evaluate field SolutionID in type *services.Information" — and the
+# whole `codefly add solution` dies after the module has already been written.
+# `.Module.Name.LowerCase` is a field BOTH contexts carry (the scaffold context
+# embeds *services.Information), so one spelling renders under both.
+# advertisement_test.go renders this template the way core does.
+#
+# The fourth, `codefly_base`, is the JavaScript identifier and appears only in
+# templates/page, which is not generated from here (it is an npm package, not a
+# Go service, so GenerateServiceTemplate does not produce it).
+#
+# `backend` is NOT replaced, and that is deliberate. A solution's entry service
+# is named `backend` by the shape's own definition — the CLI's
+# solutionEntryService and this agent's backendService are both that constant —
+# so it is not a parameter. It also appears in prose on nearly every line here
+# ("a solution backend", "the compiled backend"), which a whole-file
+# substitution would corrupt.
+replacements:
+  # Longest and most specific first: `CodeflyBase` would otherwise never match
+  # once `Codefly Base` had been rewritten, and neither contains the other.
+  - from: CodeflyBase
+    to: "{{ .OperationPrefix }}"
+  - from: Codefly Base
+    to: "{{ .Title }}"
+  - from: codefly-base
+    to: "{{ .Module.Name.LowerCase }}"
+ignores:
+  # This file.
+  - service.generation.codefly.yaml
+  # THE THREE DOCUMENTS THE CLI OWNS. They are here so base/ is a real service
+  # that compiles and passes its own tests; they are never templatized, because
+  # `codefly add solution` (cli#1216) writes them AFTER this agent's Create
+  # returns and anything written here would be overwritten silently by landing
+  # first. shape_test.go holds the generated tree to that.
+  #
+  # service.codefly.yaml carries module-identity, the endpoints and the only
+  # two service-dependencies a solution backend has. core's own generator has a
+  # hardcoded check for this name, but it compares a FULL path and so never
+  # fires; the exclusion that works is this line.
+  - service.codefly.yaml
+  # The frontend block main.go embeds. The runtime serves it and the CLI
+  # delivers it in the presence document it signs, so one file is the only way
+  # the served manifest and the signed presence cannot disagree.
+  - solution.frontend.codefly.yaml
+  # The interface document. The agent renders the first copy with the solution
+  # runtime's OWN renderer at Create (scaffold.go writeInterfaceArtifact), so
+  # the committed bytes are the bytes the scaffolded `go generate ./...`
+  # writes. A template here would be a second mechanism for one file, and the
+  # template's bytes are not the renderer's. Spelled as a path, so it excludes
+  # the document without touching openapi.go or openapi_test.go — the ignore is
+  # a substring match.
+  - openapi/api.swagger.json
+  # The one agent-OWNED file in a scaffolded backend. consumed_gen.go is
+  # rendered from the solution manifest's api.consumes by this agent
+  # (consumption.go renderConsumption) at Create and rewritten by `codefly
+  # sync`; a template would be a second mechanism, and its bytes would be
+  # base's consumption rather than the new solution's. It is here so base/
+  # compiles, and base_test.go holds it to what renderConsumption produces for
+  # base's own manifest.
+  - consumed_gen.go
+  # A workspace is a local convenience and never part of a scaffolded tree.
+  - go.work
+  - go.work.sum

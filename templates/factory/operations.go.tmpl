@@ -1,0 +1,40 @@
+package main
+
+import solution "github.com/codefly-dev/solution-runtime-go"
+
+// route is where the authority's edge routes this solution and forwards its
+// requests unchanged: /v1/<id>, the solution's alias. EVERY operation carries
+// it, because the runtime asks the authority about the route as served — a
+// path declared without it is a row no request matches.
+const route = "/v1/" + solutionID
+
+// operations is what this backend serves itself, beside the runtime's
+// passthrough.
+//
+// A freshly scaffolded solution serves none of its own: the host lists it,
+// mounts its page, and the page reads what it reads through the modules this
+// solution consumes (consumes.go). Add one per route this solution answers
+// with work that is its own.
+//
+// Policy is REQUIRED on every operation. The authority applies it to each
+// call, and an absent declaration and "nothing in particular is required"
+// must not look the same — so a route that needs nothing beyond a checked
+// caller says so with solution.AnyCheckedCaller():
+//
+//	solution.Operation{
+//		Path: route + "/notes", Method: http.MethodGet,
+//		Summary:  "list the notes the viewer may read",
+//		Callers:  "The page's Notes view.",
+//		Behavior: "Answers the viewer's own notes, newest first, 50 at a time.",
+//		Response: notesResponse{},
+//		Policy:   solution.Requires("{{ .Module.Name.LowerCase }}.note", "read"),
+//		Handler:  listNotes,
+//	}
+//
+// The resource kind a policy names is this solution's OWN vocabulary, which
+// module.contract.codefly.yaml declares under scope_ceilings. A kind the
+// contract does not declare is a scope the authority never issues, so the
+// route would refuse every call.
+func operations() []solution.Operation {
+	return nil
+}

@@ -1,0 +1,58 @@
+name: GoReleaser
+
+# The tag workflow is the SOLE publisher of this agent's artifacts
+# (agent.codefly.yaml declares `release.owner: workflow`), so nothing but a
+# `v*` tag produces a release and `codefly publish` never uploads from a
+# laptop.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # The suite runs before anything is published, on the tag itself: a tag that
+  # does not pass is a tag that publishes nothing. The end-to-end test here
+  # scaffolds a solution and compiles it, so this job is also what proves the
+  # templates in the tagged tree render into Go that builds.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go test -v ./...
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      # Each published archive carries its own SBOM, which GoReleaser needs
+      # Syft on PATH to produce. It is installed here and mounted into the
+      # cross-build container below, because that container has no Syft of its
+      # own.
+      - name: Install Syft for archive SBOMs
+        id: syft
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          syft-version: v1.44.0
+      # CGO-capable, and that is not optional: core's authoritative source
+      # inspection links real tree-sitter grammars, so an agent built with
+      # CGO_ENABLED=0 cannot parse anything. goreleaser-cross is what supplies
+      # the darwin and linux cross compilers .goreleaser.yaml names.
+      - name: Run CGO-capable GoReleaser
+        run: >-
+          docker run --rm
+          -e GITHUB_TOKEN
+          -v "$GITHUB_WORKSPACE:/workspace"
+          -v "$SYFT_PATH:/usr/local/bin/syft:ro"
+          -w /workspace
+          ghcr.io/goreleaser/goreleaser-cross:v1.27.1-1
+          release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          SYFT_PATH: ${{ steps.syft.outputs.cmd }}

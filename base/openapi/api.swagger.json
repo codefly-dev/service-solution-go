@@ -1,0 +1,39 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "definitions": {
+    "Error": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "info": {
+    "description": "The codefly-base solution's backend under the authority interface, at the route the authority's edge forwards it on: the routes it serves itself, and the module calls the solution runtime relays as the viewer. A relayed call is any checked caller's, because the child the authority issues through this solution's binding for that module, and the module's own method policy, gate it.",
+    "title": "codefly-base solution backend",
+    "version": "0.0.0"
+  },
+  "paths": {},
+  "produces": [
+    "application/json"
+  ],
+  "security": [
+    {
+      "workContext": []
+    }
+  ],
+  "securityDefinitions": {
+    "workContext": {
+      "description": "The signed-in person's Work Context for this solution, sent by the authority's edge. Every operation requires it.",
+      "in": "header",
+      "name": "x-codefly-work-context",
+      "type": "apiKey"
+    }
+  },
+  "swagger": "2.0"
+}
