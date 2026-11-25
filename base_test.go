@@ -52,7 +52,7 @@ const (
 // base/ is therefore permanently in that state, and its suite would fail if
 // consumes.go stopped filtering.
 const baseSolutionManifest = `schema_version: codefly.solution-manifest/v1
-protocol_version: codefly.solution/v0
+protocol_version: codefly.solution/v1
 api:
     exposes:
         - id: http

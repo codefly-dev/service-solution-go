@@ -4,7 +4,7 @@ import (
 	"context"
 	"embed"
 
-	builderv0 "github.com/codefly-dev/core/generated/go/codefly/services/builder/v0"
+	builderv1 "github.com/codefly-dev/core/generated/go/codefly/services/builder/v1"
 	gobuilder "github.com/codefly-dev/service-go/pkg/builder"
 )
 
@@ -71,7 +71,7 @@ func NewBuilder(svc *Service) *Builder {
 // agent and the CLI where there is none. A solution backend added with
 // `codefly add service --agent solution-go`, outside `add solution`, is told
 // what to declare by the GETTING_STARTED this Create writes.
-func (s *Builder) Create(ctx context.Context, _ *builderv0.CreateRequest) (*builderv0.CreateResponse, error) {
+func (s *Builder) Create(ctx context.Context, _ *builderv1.CreateRequest) (*builderv1.CreateResponse, error) {
 	defer s.Wool.Catch()
 	ctx = s.Wool.Inject(ctx)
 
@@ -105,7 +105,7 @@ func (s *Builder) Create(ctx context.Context, _ *builderv0.CreateRequest) (*buil
 // rendered from the running declaration — so the scaffolded openapi.go
 // carries a `go:generate` line and a test that fails on a stale artifact, and
 // `go generate ./...` in the service directory is what moves it.
-func (s *Builder) Sync(ctx context.Context, _ *builderv0.SyncRequest) (*builderv0.SyncResponse, error) {
+func (s *Builder) Sync(ctx context.Context, _ *builderv1.SyncRequest) (*builderv1.SyncResponse, error) {
 	defer s.Wool.Catch()
 	ctx = s.Wool.Inject(ctx)
 

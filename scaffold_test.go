@@ -70,8 +70,8 @@ func syncAsTheCLIDoes(t *testing.T, root, module string) {
 
 // emptyManifest is a solution manifest that consumes nothing — what `codefly
 // add solution` writes with no --consumes.
-const emptyManifest = `schema_version: codefly.solution-manifest/v0
-protocol_version: codefly.solution/v0
+const emptyManifest = `schema_version: codefly.solution-manifest/v1
+protocol_version: codefly.solution/v1
 api:
     exposes:
         - id: http
@@ -84,8 +84,8 @@ lifecycle:
 // consumingManifest declares two modules, as `codefly add solution --consumes`
 // writes them: route names only, no scopes — authority is declared once, in
 // the module contract.
-const consumingManifest = `schema_version: codefly.solution-manifest/v0
-protocol_version: codefly.solution/v0
+const consumingManifest = `schema_version: codefly.solution-manifest/v1
+protocol_version: codefly.solution/v1
 api:
     exposes:
         - id: http

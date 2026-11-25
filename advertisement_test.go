@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/codefly-dev/core/agents/services"
-	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
+	agentv1 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v1"
 	"github.com/codefly-dev/core/resources"
 	"github.com/codefly-dev/core/shared"
 	"github.com/codefly-dev/core/templates"
@@ -37,7 +37,7 @@ func TestTheAdvertisementRendersBeforeAnyServiceExists(t *testing.T) {
 	require.Nil(t, svc.Base.Information,
 		"this test is only honest while the agent carries no service here; if core now supplies one, make this test build the state it supplies")
 
-	information, err := svc.GetAgentInformation(context.Background(), &agentv0.AgentInformationRequest{})
+	information, err := svc.GetAgentInformation(context.Background(), &agentv1.AgentInformationRequest{})
 	require.NoError(t, err, "GetAgentInformation must render with no service loaded: this is what `codefly add service` calls first")
 	require.NotEmpty(t, information.ReadMe)
 	require.Contains(t, information.ReadMe, agent.Name,

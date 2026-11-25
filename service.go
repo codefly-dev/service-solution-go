@@ -5,7 +5,7 @@ import (
 
 	"github.com/codefly-dev/core/agents/contract"
 	"github.com/codefly-dev/core/agents/services"
-	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
+	agentv1 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v1"
 	"github.com/codefly-dev/core/languages"
 	runnersbase "github.com/codefly-dev/core/runners/base"
 	"github.com/codefly-dev/core/shared"
@@ -65,7 +65,7 @@ const solutionSourceDir = "."
 // one endpoint a solution backend exposes, which the authority's edge fronts),
 // and it carries this repository's own README so `codefly add service` prints
 // what a solution backend is rather than "Generic Go service".
-func (s *Service) GetAgentInformation(ctx context.Context, _ *agentv0.AgentInformationRequest) (*agentv0.AgentInformation, error) {
+func (s *Service) GetAgentInformation(ctx context.Context, _ *agentv1.AgentInformationRequest) (*agentv1.AgentInformation, error) {
 	defer s.Wool.Catch()
 
 	info := s.Information
@@ -83,12 +83,12 @@ func (s *Service) GetAgentInformation(ctx context.Context, _ *agentv0.AgentInfor
 			Nix:    true,
 			Docker: true,
 		},
-		Toolchains: []agentv0.Toolchain_Type{agentv0.Toolchain_GO},
-		Languages:  []agentv0.Language_Type{agentv0.Language_GO},
+		Toolchains: []agentv1.Toolchain_Type{agentv1.Toolchain_GO},
+		Languages:  []agentv1.Language_Type{agentv1.Language_GO},
 		// A solution backend serves one HTTP endpoint and the authority's edge
 		// fronts it; it speaks no gRPC of its own, and the module calls it
 		// relays are the runtime's gRPC client, not a served protocol.
-		Protocols:  []agentv0.Protocol_Type{agentv0.Protocol_HTTP},
+		Protocols:  []agentv1.Protocol_Type{agentv1.Protocol_HTTP},
 		ReadMe:     readme,
 		Validation: goservice.ValidationCapabilities(),
 		// Sync is supported: it regenerates what api.consumes projects into Go
