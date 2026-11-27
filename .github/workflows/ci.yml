@@ -15,4 +15,4 @@ jobs:
   # version go.mod requires, so the checks this agent is held to move with the
   # core it compiles against rather than drifting in a workflow nobody reads.
   ci:
-    uses: codefly-dev/core/.github/workflows/go-service-ci.yml@v0.19.10
+    uses: codefly-dev/core/.github/workflows/go-service-ci.yml@50c2b2ab29a47504cb81195670361d140745f6cb
