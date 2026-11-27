@@ -119,6 +119,7 @@ that module's service, past the check, and `check_solution_mesh.py` refuses it
 
 | what | command |
 |---|---|
+| the source CI gate (build, vet, tidy and uncached tests) | `make verify` |
 | the agent | `GOWORK=off go build ./... && GOWORK=off go vet ./...` |
 | everything | `GOWORK=off go test ./...` |
 | refresh generated files | `GOWORK=off go test -update ./...` |
